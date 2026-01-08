@@ -21,4 +21,5 @@ func UserRouter(env *bootstrap.Env, timeout time.Duration, connectionPool *pgxpo
 	router.Get("/users", uc.GetAllUsers)
 	router.Get("/users/{id}", uc.GetUserById)
 	router.Put("/users/{id}", uc.UpdateUser)
+	router.Delete("/users/{id}", uc.DeleteUser)
 }

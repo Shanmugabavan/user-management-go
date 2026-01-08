@@ -113,6 +113,16 @@ func (ur *userRepository) Update(c context.Context, id uuid.UUID, user *domain.U
 	return created, err
 }
 
+func (ur *userRepository) Delete(c context.Context, id uuid.UUID) (uuid.UUID, error) {
+	deletedUserId, err := ur.queries.DeleteUser(c, toPgUUID(id))
+
+	if err != nil {
+		return uuid.New(), err
+	}
+
+	return toUUIDFromPgUUID(deletedUserId), err
+}
+
 func toPgUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{
 		Bytes: id,

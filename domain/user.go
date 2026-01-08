@@ -34,4 +34,5 @@ type UserRepository interface {
 	GetAll(c context.Context) ([]User, error)
 	GetById(c context.Context, id uuid.UUID) (User, error)
 	Update(c context.Context, id uuid.UUID, user *User) (db.UpdateUserRow, error)
+	Delete(c context.Context, id uuid.UUID) (uuid.UUID, error)
 }

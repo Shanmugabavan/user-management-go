@@ -27,3 +27,8 @@ SET
     status     = COALESCE($7, status)
 WHERE user_id = $1
     RETURNING user_id, email, status;
+
+-- name: DeleteUser :one
+DELETE FROM users
+WHERE user_id = $1
+    RETURNING user_id;
