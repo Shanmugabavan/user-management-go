@@ -21,8 +21,8 @@ func NewEnv() *Env {
 	env := Env{}
 	viper.SetConfigFile(".env")
 
-	err := viper.ReadInConfig()
-	err = viper.Unmarshal(&env)
+	_ = viper.ReadInConfig()
+	err := viper.Unmarshal(&env)
 
 	if err != nil {
 		log.Fatal("Can't find the file .env : ", err)

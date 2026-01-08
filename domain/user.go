@@ -7,10 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	tableUser = "users"
-)
-
 type User struct {
 	UserId    uuid.UUID
 	FirstName string
