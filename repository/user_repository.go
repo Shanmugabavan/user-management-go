@@ -4,7 +4,6 @@ import (
 	"context"
 	"user-management/domain"
 	"user-management/internal/db"
-	"user-management/internal/validator"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -24,11 +23,6 @@ func NewUserRepository(pool *pgxpool.Pool) domain.UserRepository {
 }
 
 func (ur *userRepository) Create(c context.Context, user *domain.User) (db.CreateUserRow, error) {
-	valError := validator.Validate.Struct(user)
-	if valError != nil {
-		return db.CreateUserRow{}, valError
-	}
-
 	createdd, err := ur.queries.CreateUser(c, db.CreateUserParams{
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
@@ -58,7 +52,7 @@ func (ur *userRepository) GetAll(c context.Context) ([]domain.User, error) {
 
 	for _, u := range dbUsers {
 		users = append(users, domain.User{
-			UserId:    toUUIDfromPgUUID(u.UserID),
+			UserId:    toUUIDFromPgUUID(u.UserID),
 			FirstName: u.FirstName,
 			LastName:  u.LastName,
 			Email:     u.Email,
@@ -79,7 +73,7 @@ func (ur *userRepository) GetById(c context.Context, id uuid.UUID) (domain.User,
 	}
 
 	user := domain.User{
-		UserId:    toUUIDfromPgUUID(dbUser.UserID),
+		UserId:    toUUIDFromPgUUID(dbUser.UserID),
 		FirstName: dbUser.FirstName,
 		LastName:  dbUser.LastName,
 		Email:     dbUser.Email,
@@ -91,6 +85,34 @@ func (ur *userRepository) GetById(c context.Context, id uuid.UUID) (domain.User,
 	return user, nil
 }
 
+func (ur *userRepository) Update(c context.Context, id uuid.UUID, user *domain.User) (db.UpdateUserRow, error) {
+	retrived, retError := ur.GetById(c, id)
+
+	updateDbEntity(&retrived, user)
+
+	if retError != nil {
+		return db.UpdateUserRow{}, retError
+	}
+
+	createdd, err := ur.queries.UpdateUser(c, db.UpdateUserParams{
+		UserID:    toPgUUID(id),
+		FirstName: retrived.FirstName,
+		LastName:  retrived.LastName,
+		Email:     retrived.Email,
+		Phone:     retrived.Phone,
+		Age:       int32(retrived.Age),
+		Status:    int32(retrived.Status),
+	})
+
+	created := db.UpdateUserRow{
+		UserID: createdd.UserID,
+		Email:  createdd.Email,
+		Status: createdd.Status,
+	}
+
+	return created, err
+}
+
 func toPgUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{
 		Bytes: id,
@@ -98,9 +120,36 @@ func toPgUUID(id uuid.UUID) pgtype.UUID {
 	}
 }
 
-func toUUIDfromPgUUID(id pgtype.UUID) uuid.UUID {
+func toUUIDFromPgUUID(id pgtype.UUID) uuid.UUID {
 	if !id.Valid {
 		return uuid.Nil
 	}
 	return id.Bytes
+}
+
+func updateDbEntity(retrieved *domain.User, current *domain.User) {
+	// strings: update only if not empty
+	if current.FirstName != "" {
+		retrieved.FirstName = current.FirstName
+	}
+
+	if current.LastName != "" {
+		retrieved.LastName = current.LastName
+	}
+
+	if current.Email != "" {
+		retrieved.Email = current.Email
+	}
+
+	if current.Phone != "" {
+		retrieved.Phone = current.Phone
+	}
+
+	if current.Age != 0 {
+		retrieved.Age = current.Age
+	}
+
+	if current.Status != 0 {
+		retrieved.Status = current.Status
+	}
 }
