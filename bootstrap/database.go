@@ -40,7 +40,5 @@ func GetConnectionPool(env *Env) *pgxpool.Pool {
 }
 
 func CloseConnectionPool(db *pgxpool.Pool) {
-	if db != nil {
-	}
 	db.Close()
 }
