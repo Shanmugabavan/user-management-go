@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"user-management/api/controller"
 	"user-management/api/controller/user/create"
@@ -114,7 +115,7 @@ func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 		Status:    userEntity.Status,
 	}
 	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusInternalServerError)
+		http.Error(w, errors.New("user not found").Error(), http.StatusNotFound)
 		return
 	}
 
@@ -164,7 +165,7 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		Status: updatedUser.Status,
 	}
 	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusInternalServerError)
+		http.Error(w, errors.New("user not found").Error(), http.StatusNotFound)
 		return
 	}
 
@@ -172,4 +173,25 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	_ = json.NewEncoder(w).Encode(createUserResponse)
+}
+
+func (u *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+
+	userID, errId := uuid.Parse(idParam)
+
+	if errId != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	_, err2 := u.Delete(r.Context(), userID)
+
+	if err2 != nil {
+		http.Error(w, errors.New("user not found").Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 }
