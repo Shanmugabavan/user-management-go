@@ -5,6 +5,5 @@ CREATE TABLE users (
                        email       TEXT NOT NULL UNIQUE,
                        phone       TEXT NOT NULL,
                        age         INT NOT NULL CHECK (age >= 0),
-                       status      INT NOT NULL,
-                       created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+                       status      INT NOT NULL
 );

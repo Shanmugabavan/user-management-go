@@ -29,8 +29,7 @@ func (ur *userRepository) Create(c context.Context, user *domain.User) (db.Creat
 		return db.CreateUserRow{}, valError
 	}
 
-	createdd, _ := ur.queries.CreateUser(c, db.CreateUserParams{
-		UserID:    toPgUUID(user.UserId),
+	createdd, err := ur.queries.CreateUser(c, db.CreateUserParams{
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
@@ -39,41 +38,57 @@ func (ur *userRepository) Create(c context.Context, user *domain.User) (db.Creat
 		Status:    int32(user.Status),
 	})
 
-	//const query = `
-	//    INSERT INTO users (user_id, first_name, last_name, email, phone, age, status)
-	//    VALUES ($1, $2, $3, $4, $5, $6, $7)
-	//    RETURNING user_id, email, status
-	//`
-
-	//row := ur.connectionPool.QueryRow(
-	//	c,
-	//	query,
-	//	user.UserId,
-	//	user.FirstName,
-	//	user.LastName,
-	//	user.Email,
-	//	user.Phone,
-	//	user.Age,
-	//	user.Status,
-	//)
-
-	//var created domain.User
-	//err := row.Scan(
-	//	&created.UserId,
-	//	&created.Email,
-	//	&created.Status,
-	//)
-	//if err != nil {
-	//	return domain.User{}, err
-	//}
-
-	var created = db.CreateUserRow{
+	created := db.CreateUserRow{
 		UserID: createdd.UserID,
 		Email:  createdd.Email,
 		Status: createdd.Status,
 	}
 
-	return created, nil
+	return created, err
+}
+
+func (ur *userRepository) GetAll(c context.Context) ([]domain.User, error) {
+	dbUsers, err := ur.queries.GetAllUsers(c)
+
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]domain.User, 0, len(dbUsers))
+
+	for _, u := range dbUsers {
+		users = append(users, domain.User{
+			UserId:    toUUIDfromPgUUID(u.UserID),
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Email:     u.Email,
+			Phone:     u.Phone,
+			Age:       int(u.Age),
+			Status:    domain.UserStatus(u.Status),
+		})
+	}
+
+	return users, nil
+}
+
+func (ur *userRepository) GetById(c context.Context, id uuid.UUID) (domain.User, error) {
+	dbUser, err := ur.queries.GetUser(c, toPgUUID(id))
+
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	user := domain.User{
+		UserId:    toUUIDfromPgUUID(dbUser.UserID),
+		FirstName: dbUser.FirstName,
+		LastName:  dbUser.LastName,
+		Email:     dbUser.Email,
+		Phone:     dbUser.Phone,
+		Age:       int(dbUser.Age),
+		Status:    domain.UserStatus(dbUser.Status),
+	}
+
+	return user, nil
 }
 
 func toPgUUID(id uuid.UUID) pgtype.UUID {
@@ -81,4 +96,11 @@ func toPgUUID(id uuid.UUID) pgtype.UUID {
 		Bytes: id,
 		Valid: true,
 	}
+}
+
+func toUUIDfromPgUUID(id pgtype.UUID) uuid.UUID {
+	if !id.Valid {
+		return uuid.Nil
+	}
+	return id.Bytes
 }
