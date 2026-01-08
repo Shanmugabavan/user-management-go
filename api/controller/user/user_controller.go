@@ -2,11 +2,10 @@ package user
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"user-management/api/controller"
 	"user-management/api/controller/user/create"
 	"user-management/api/controller/user/update"
+	"user-management/api/responses"
 	"user-management/bootstrap"
 	"user-management/domain"
 	"user-management/internal/validator"
@@ -20,18 +19,38 @@ type UserController struct {
 	Env *bootstrap.Env
 }
 
+// CreateUser godoc
+// @Summary Create user
+// @Description Create a new user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body create.UserRequest true "User data"
+// @Success 201 {object} domain.User
+// @Failure 400 {object} responses.Response "Validation failed"
+// @Failure 404 {object} responses.Response "User not found"
+// @Failure 500 {object} responses.Response "Internal Server Error"
+// @Router /users [post]
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var createUserRequest create.UserRequest
 
 	err := json.NewDecoder(r.Body).Decode(&createUserRequest)
 	if err != nil {
-		http.Error(w, controller.JsonError(err.Error()), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "Json conversion error",
+			Errors:  err.Error(),
+		})
 		return
 	}
 
 	valError := validator.Validate.Struct(createUserRequest)
 	if valError != nil {
-		http.Error(w, valError.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "validation failed",
+			Errors:  valError.Error(),
+		})
 		return
 	}
 
@@ -57,7 +76,11 @@ func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 		Status: createdUser.Status,
 	}
 	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "Internal Server Error",
+			Errors:  err2.Error(),
+		})
 		return
 	}
 
@@ -67,6 +90,15 @@ func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(createUserResponse)
 }
 
+// GetAllUsers godoc
+// @Summary Get all users
+// @Description Retrieve all users
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.User "List of users"
+// @Failure 500 {object} responses.Response "Internal Server Error"
+// @Router /users [get]
 func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	userEntities, err2 := u.GetAll(r.Context())
 
@@ -84,7 +116,13 @@ func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	if err2 != nil {
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, err2.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "Internal Server Error",
+			Errors:  err2.Error(),
+		})
 		return
 	}
 
@@ -94,12 +132,30 @@ func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(usersDtoResponse)
 }
 
+// GetUserById godoc
+// @Summary Get user by ID
+// @Description Retrieve a single user by UUID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID (UUID)"
+// @Success 200 {object} domain.User "User found"
+// @Failure 400 {object} responses.Response "Invalid user ID"
+// @Failure 404 {object} responses.Response "User not found"
+// @Failure 500 {object} responses.Response "Internal server error"
+// @Router /users/{id} [get]
 func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 
 	userID, err := uuid.Parse(idParam)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(responses.Response{
+			Message: "Internal Server Error",
+			Errors:  err.Error(),
+		})
+
 		return
 	}
 
@@ -115,7 +171,13 @@ func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 		Status:    userEntity.Status,
 	}
 	if err2 != nil {
-		http.Error(w, errors.New("user not found").Error(), http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(responses.Response{
+			Message: "user not found",
+			Errors:  err2.Error(),
+		})
+
 		return
 	}
 
@@ -125,6 +187,19 @@ func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(userResponse)
 }
 
+// UpdateUser godoc
+// @Summary Update user
+// @Description Update an existing user by ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID (UUID)"
+// @Param user body update.UserRequest true "Update user payload"
+// @Success 200 {object} create.UserResponse "User updated successfully"
+// @Failure 400 {object} responses.Response "Invalid request / Validation failed"
+// @Failure 404 {object} responses.Response "User not found"
+// @Failure 500 {object} responses.Response "Internal server error"
+// @Router /users/{id} [put]
 func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	var updateUserRequest update.UserRequest
 	idParam := chi.URLParam(r, "id")
@@ -132,19 +207,32 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	userID, errId := uuid.Parse(idParam)
 
 	if errId != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "user not found",
+			Errors:  errId.Error(),
+		})
 		return
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&updateUserRequest)
 	if err != nil {
-		http.Error(w, controller.JsonError(err.Error()), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "Json Conversion Issue",
+			Errors:  err.Error(),
+		})
 		return
 	}
 
 	valError := validator.Validate.Struct(updateUserRequest)
 	if valError != nil {
 		http.Error(w, valError.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "validation failed",
+			Errors:  valError.Error(),
+		})
 		return
 	}
 
@@ -165,7 +253,11 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		Status: updatedUser.Status,
 	}
 	if err2 != nil {
-		http.Error(w, errors.New("user not found").Error(), http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "user not found",
+			Errors:  err2.Error(),
+		})
 		return
 	}
 
@@ -175,20 +267,40 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(createUserResponse)
 }
 
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Delete a user by ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID (UUID)"
+// @Success 202 {string} string "User deleted successfully"
+// @Failure 400 {object} responses.Response "Invalid user ID"
+// @Failure 404 {object} responses.Response "User not found"
+// @Failure 500 {object} responses.Response "Internal server error"
+// @Router /users/{id} [delete]
 func (u *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 
 	userID, errId := uuid.Parse(idParam)
 
 	if errId != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "Invalid user id",
+			Errors:  errId.Error(),
+		})
 		return
 	}
 
 	_, err2 := u.Delete(r.Context(), userID)
 
 	if err2 != nil {
-		http.Error(w, errors.New("user not found").Error(), http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(responses.Response{
+			Message: "user not found",
+			Errors:  err2.Error(),
+		})
 		return
 	}
 
