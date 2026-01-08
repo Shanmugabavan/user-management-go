@@ -12,6 +12,6 @@ import (
 func Setup(env *bootstrap.Env, timeout time.Duration, connectionPool *pgxpool.Pool, router *chi.Mux) {
 	// Public APIs
 	router.Group(func(r chi.Router) {
-		users.CreateUserRouter(env, timeout, connectionPool, router)
+		users.UserRouter(env, timeout, connectionPool, router)
 	})
 }

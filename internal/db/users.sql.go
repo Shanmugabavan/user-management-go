@@ -7,12 +7,12 @@ package db
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-    user_id,
     first_name,
     last_name,
     email,
@@ -20,12 +20,11 @@ INSERT INTO users (
     age,
     status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+VALUES ( $1, $2, $3, $4, $5, $6)
     RETURNING user_id, email, status
 `
 
 type CreateUserParams struct {
-	UserID    pgtype.UUID
 	FirstName string
 	LastName  string
 	Email     string
@@ -42,7 +41,6 @@ type CreateUserRow struct {
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.UserID,
 		arg.FirstName,
 		arg.LastName,
 		arg.Email,
@@ -52,5 +50,56 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	)
 	var i CreateUserRow
 	err := row.Scan(&i.UserID, &i.Email, &i.Status)
+	return i, err
+}
+
+const getAllUsers = `-- name: GetAllUsers :many
+SELECT user_id, first_name, last_name, email, phone, age, status FROM users ORDER BY first_name
+`
+
+func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.Query(ctx, getAllUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Email,
+			&i.Phone,
+			&i.Age,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUser = `-- name: GetUser :one
+SELECT user_id, first_name, last_name, email, phone, age, status FROM users WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUser(ctx context.Context, userID pgtype.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, userID)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.FirstName,
+		&i.LastName,
+		&i.Email,
+		&i.Phone,
+		&i.Age,
+		&i.Status,
+	)
 	return i, err
 }

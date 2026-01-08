@@ -30,4 +30,6 @@ const (
 
 type UserRepository interface {
 	Create(ctx context.Context, user *User) (db.CreateUserRow, error)
+	GetAll(c context.Context) ([]User, error)
+	GetById(c context.Context, id uuid.UUID) (User, error)
 }

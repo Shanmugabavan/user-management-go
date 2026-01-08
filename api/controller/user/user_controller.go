@@ -8,6 +8,7 @@ import (
 	"user-management/bootstrap"
 	"user-management/domain"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -50,4 +51,62 @@ func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	_ = json.NewEncoder(w).Encode(createUserResponse)
+}
+
+func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	userEntities, err2 := u.GetAll(r.Context())
+
+	usersDtoResponse := make([]domain.User, 0, len(userEntities))
+
+	for _, u := range userEntities {
+		usersDtoResponse = append(usersDtoResponse, domain.User{
+			UserId:    u.UserId,
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Email:     u.Email,
+			Phone:     u.Phone,
+			Age:       int(u.Age),
+			Status:    u.Status,
+		})
+	}
+	if err2 != nil {
+		http.Error(w, err2.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_ = json.NewEncoder(w).Encode(usersDtoResponse)
+}
+
+func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+
+	userID, err := uuid.Parse(idParam)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	userEntity, err2 := u.GetById(r.Context(), userID)
+
+	userResponse := domain.User{
+		UserId:    userEntity.UserId,
+		FirstName: userEntity.FirstName,
+		LastName:  userEntity.LastName,
+		Email:     userEntity.Email,
+		Phone:     userEntity.Phone,
+		Age:       userEntity.Age,
+		Status:    userEntity.Status,
+	}
+	if err2 != nil {
+		http.Error(w, err2.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_ = json.NewEncoder(w).Encode(userResponse)
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func CreateUserRouter(env *bootstrap.Env, timeout time.Duration, connectionPool *pgxpool.Pool, router *chi.Mux) {
+func UserRouter(env *bootstrap.Env, timeout time.Duration, connectionPool *pgxpool.Pool, router *chi.Mux) {
 	ur := repository.NewUserRepository(connectionPool)
 	uc := &user.UserController{
 		UserRepository: ur,
@@ -18,5 +18,6 @@ func CreateUserRouter(env *bootstrap.Env, timeout time.Duration, connectionPool 
 	}
 
 	router.Post("/users", uc.CreateUser)
-
+	router.Get("/users", uc.GetAllUsers)
+	router.Get("/users/{id}", uc.GetUserById)
 }
