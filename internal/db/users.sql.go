@@ -103,3 +103,47 @@ func (q *Queries) GetUser(ctx context.Context, userID pgtype.UUID) (User, error)
 	)
 	return i, err
 }
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET
+    first_name = COALESCE($2, first_name),
+    last_name  = COALESCE($3, last_name),
+    email      = COALESCE($4, email),
+    phone      = COALESCE($5, phone),
+    age        = COALESCE($6, age),
+    status     = COALESCE($7, status)
+WHERE user_id = $1
+    RETURNING user_id, email, status
+`
+
+type UpdateUserParams struct {
+	UserID    pgtype.UUID
+	FirstName string
+	LastName  string
+	Email     string
+	Phone     string
+	Age       int32
+	Status    int32
+}
+
+type UpdateUserRow struct {
+	UserID pgtype.UUID
+	Email  string
+	Status int32
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.UserID,
+		arg.FirstName,
+		arg.LastName,
+		arg.Email,
+		arg.Phone,
+		arg.Age,
+		arg.Status,
+	)
+	var i UpdateUserRow
+	err := row.Scan(&i.UserID, &i.Email, &i.Status)
+	return i, err
+}

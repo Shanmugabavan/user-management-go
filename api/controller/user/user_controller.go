@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"user-management/api/controller"
 	"user-management/api/controller/user/create"
+	"user-management/api/controller/user/update"
 	"user-management/bootstrap"
 	"user-management/domain"
+	"user-management/internal/validator"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -18,11 +20,22 @@ type UserController struct {
 }
 
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var createUserRequest create.CreateUserRequest
+	var createUserRequest create.UserRequest
+
 	err := json.NewDecoder(r.Body).Decode(&createUserRequest)
 	if err != nil {
 		http.Error(w, controller.JsonError(err.Error()), http.StatusBadRequest)
 		return
+	}
+
+	valError := validator.Validate.Struct(createUserRequest)
+	if valError != nil {
+		http.Error(w, valError.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if createUserRequest.Status == domain.UserStatusDefault {
+		createUserRequest.Status = domain.UserStatusActive
 	}
 
 	user := domain.User{
@@ -37,13 +50,13 @@ func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	createdUser, err2 := u.Create(r.Context(), &user)
 
-	createUserResponse := create.CreateUserResponse{
+	createUserResponse := create.UserResponse{
 		UserID: createdUser.UserID,
 		Email:  createdUser.Email,
 		Status: createdUser.Status,
 	}
 	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusBadRequest)
+		http.Error(w, err2.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -70,7 +83,7 @@ func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusBadRequest)
+		http.Error(w, err2.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -101,7 +114,7 @@ func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 		Status:    userEntity.Status,
 	}
 	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusBadRequest)
+		http.Error(w, err2.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -109,4 +122,54 @@ func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	_ = json.NewEncoder(w).Encode(userResponse)
+}
+
+func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	var updateUserRequest update.UserRequest
+	idParam := chi.URLParam(r, "id")
+
+	userID, errId := uuid.Parse(idParam)
+
+	if errId != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&updateUserRequest)
+	if err != nil {
+		http.Error(w, controller.JsonError(err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	valError := validator.Validate.Struct(updateUserRequest)
+	if valError != nil {
+		http.Error(w, valError.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user := domain.User{
+		FirstName: updateUserRequest.FirstName,
+		LastName:  updateUserRequest.LastName,
+		Email:     updateUserRequest.Email,
+		Phone:     updateUserRequest.Phone,
+		Age:       updateUserRequest.Age,
+		Status:    domain.UserStatus(updateUserRequest.Status),
+	}
+
+	updatedUser, err2 := u.Update(r.Context(), userID, &user)
+
+	createUserResponse := create.UserResponse{
+		UserID: updatedUser.UserID,
+		Email:  updatedUser.Email,
+		Status: updatedUser.Status,
+	}
+	if err2 != nil {
+		http.Error(w, err2.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_ = json.NewEncoder(w).Encode(createUserResponse)
 }
