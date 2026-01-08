@@ -2,7 +2,7 @@ package users
 
 import (
 	"time"
-	"user-management/api/controller"
+	"user-management/api/controller/user"
 	"user-management/bootstrap"
 	"user-management/repository"
 
@@ -12,7 +12,7 @@ import (
 
 func CreateUserRouter(env *bootstrap.Env, timeout time.Duration, connectionPool *pgxpool.Pool, router *chi.Mux) {
 	ur := repository.NewUserRepository(connectionPool)
-	uc := &controller.UserController{
+	uc := &user.UserController{
 		UserRepository: ur,
 		Env:            env,
 	}

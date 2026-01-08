@@ -1,8 +1,10 @@
-package controller
+package user
 
 import (
 	"encoding/json"
 	"net/http"
+	"user-management/api/controller"
+	"user-management/api/controller/user/create"
 	"user-management/bootstrap"
 	"user-management/domain"
 
@@ -15,10 +17,10 @@ type UserController struct {
 }
 
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var createUserRequest domain.CreateUserRequest
+	var createUserRequest create.CreateUserRequest
 	err := json.NewDecoder(r.Body).Decode(&createUserRequest)
 	if err != nil {
-		http.Error(w, jsonError(err.Error()), http.StatusBadRequest)
+		http.Error(w, controller.JsonError(err.Error()), http.StatusBadRequest)
 		return
 	}
 
@@ -29,13 +31,23 @@ func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 		Email:     createUserRequest.Email,
 		Phone:     createUserRequest.Phone,
 		Age:       createUserRequest.Age,
+		Status:    createUserRequest.Status,
 	}
 
-	_, err2 := u.Create(r.Context(), &user)
+	createdUser, err2 := u.Create(r.Context(), &user)
+
+	createUserResponse := create.CreateUserResponse{
+		UserID: createdUser.UserID,
+		Email:  createdUser.Email,
+		Status: createdUser.Status,
+	}
 	if err2 != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, err2.Error(), http.StatusBadRequest)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	_ = json.NewEncoder(w).Encode(createUserResponse)
 }
