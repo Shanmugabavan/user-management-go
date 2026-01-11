@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	pool "github.com/jackc/pgx/v5/pgxpool"
 )
 
-func GetConnectionPool(env *Env) *pgxpool.Pool {
+func GetConnectionPool(env *Env) *pool.Pool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -25,7 +25,7 @@ func GetConnectionPool(env *Env) *pgxpool.Pool {
 
 	var err error
 
-	db, err := pgxpool.New(ctx, connectionString)
+	db, err := pool.New(ctx, connectionString)
 	if err != nil {
 		log.Fatal("Unable to create connection pool:", err)
 	}
@@ -39,6 +39,6 @@ func GetConnectionPool(env *Env) *pgxpool.Pool {
 	return db
 }
 
-func CloseConnectionPool(db *pgxpool.Pool) {
+func CloseConnectionPool(db *pool.Pool) {
 	db.Close()
 }

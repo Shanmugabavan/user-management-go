@@ -10,19 +10,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type userRepository struct {
+type UserRepository struct {
 	connectionPool *pgxpool.Pool
 	queries        *db.Queries
 }
 
 func NewUserRepository(pool *pgxpool.Pool) domain.UserRepository {
-	return &userRepository{
+	return &UserRepository{
 		connectionPool: pool,
 		queries:        db.New(pool),
 	}
 }
 
-func (ur *userRepository) Create(c context.Context, user *domain.User) (db.CreateUserRow, error) {
+func (ur *UserRepository) Create(c context.Context, user *domain.User) (db.CreateUserRow, error) {
 	createdd, err := ur.queries.CreateUser(c, db.CreateUserParams{
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
@@ -41,7 +41,7 @@ func (ur *userRepository) Create(c context.Context, user *domain.User) (db.Creat
 	return created, err
 }
 
-func (ur *userRepository) GetAll(c context.Context) ([]domain.User, error) {
+func (ur *UserRepository) GetAll(c context.Context) ([]domain.User, error) {
 	dbUsers, err := ur.queries.GetAllUsers(c)
 
 	if err != nil {
@@ -65,7 +65,7 @@ func (ur *userRepository) GetAll(c context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
-func (ur *userRepository) GetById(c context.Context, id uuid.UUID) (domain.User, error) {
+func (ur *UserRepository) GetById(c context.Context, id uuid.UUID) (domain.User, error) {
 	dbUser, err := ur.queries.GetUser(c, toPgUUID(id))
 
 	if err != nil {
@@ -85,7 +85,7 @@ func (ur *userRepository) GetById(c context.Context, id uuid.UUID) (domain.User,
 	return user, nil
 }
 
-func (ur *userRepository) Update(c context.Context, id uuid.UUID, user *domain.User) (db.UpdateUserRow, error) {
+func (ur *UserRepository) Update(c context.Context, id uuid.UUID, user *domain.User) (db.UpdateUserRow, error) {
 	retrived, retError := ur.GetById(c, id)
 
 	updateDbEntity(&retrived, user)
@@ -113,7 +113,7 @@ func (ur *userRepository) Update(c context.Context, id uuid.UUID, user *domain.U
 	return created, err
 }
 
-func (ur *userRepository) Delete(c context.Context, id uuid.UUID) (uuid.UUID, error) {
+func (ur *UserRepository) Delete(c context.Context, id uuid.UUID) (uuid.UUID, error) {
 	deletedUserId, err := ur.queries.DeleteUser(c, toPgUUID(id))
 
 	if err != nil {
@@ -138,7 +138,6 @@ func toUUIDFromPgUUID(id pgtype.UUID) uuid.UUID {
 }
 
 func updateDbEntity(retrieved *domain.User, current *domain.User) {
-	// strings: update only if not empty
 	if current.FirstName != "" {
 		retrieved.FirstName = current.FirstName
 	}
