@@ -1,7 +1,6 @@
 package users
 
 import (
-	"time"
 	"user-management/api/controller/user"
 	"user-management/bootstrap"
 	"user-management/repository"
@@ -10,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func UserRouter(env *bootstrap.Env, timeout time.Duration, connectionPool *pgxpool.Pool, router *chi.Mux) {
+func UserRouter(env *bootstrap.Env, connectionPool *pgxpool.Pool, router *chi.Mux) {
 	ur := repository.NewUserRepository(connectionPool)
 	uc := &user.UserController{
 		UserRepository: ur,
