@@ -24,6 +24,7 @@ func NewUserRepository(pool *pgxpool.Pool) domain.UserRepository {
 
 func (ur *UserRepository) Create(c context.Context, user *domain.User) (db.CreateUserRow, error) {
 	createdd, err := ur.queries.CreateUser(c, db.CreateUserParams{
+		UserID:    ToPgUUID(user.UserId),
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
@@ -52,7 +53,7 @@ func (ur *UserRepository) GetAll(c context.Context) ([]domain.User, error) {
 
 	for _, u := range dbUsers {
 		users = append(users, domain.User{
-			UserId:    toUUIDFromPgUUID(u.UserID),
+			UserId:    ToUUIDFromPgUUID(u.UserID),
 			FirstName: u.FirstName,
 			LastName:  u.LastName,
 			Email:     u.Email,
@@ -66,14 +67,14 @@ func (ur *UserRepository) GetAll(c context.Context) ([]domain.User, error) {
 }
 
 func (ur *UserRepository) GetById(c context.Context, id uuid.UUID) (domain.User, error) {
-	dbUser, err := ur.queries.GetUser(c, toPgUUID(id))
+	dbUser, err := ur.queries.GetUser(c, ToPgUUID(id))
 
 	if err != nil {
 		return domain.User{}, err
 	}
 
 	user := domain.User{
-		UserId:    toUUIDFromPgUUID(dbUser.UserID),
+		UserId:    ToUUIDFromPgUUID(dbUser.UserID),
 		FirstName: dbUser.FirstName,
 		LastName:  dbUser.LastName,
 		Email:     dbUser.Email,
@@ -95,7 +96,7 @@ func (ur *UserRepository) Update(c context.Context, id uuid.UUID, user *domain.U
 	}
 
 	createdd, err := ur.queries.UpdateUser(c, db.UpdateUserParams{
-		UserID:    toPgUUID(id),
+		UserID:    ToPgUUID(id),
 		FirstName: retrived.FirstName,
 		LastName:  retrived.LastName,
 		Email:     retrived.Email,
@@ -114,23 +115,23 @@ func (ur *UserRepository) Update(c context.Context, id uuid.UUID, user *domain.U
 }
 
 func (ur *UserRepository) Delete(c context.Context, id uuid.UUID) (uuid.UUID, error) {
-	deletedUserId, err := ur.queries.DeleteUser(c, toPgUUID(id))
+	deletedUserId, err := ur.queries.DeleteUser(c, ToPgUUID(id))
 
 	if err != nil {
 		return uuid.New(), err
 	}
 
-	return toUUIDFromPgUUID(deletedUserId), err
+	return ToUUIDFromPgUUID(deletedUserId), err
 }
 
-func toPgUUID(id uuid.UUID) pgtype.UUID {
+func ToPgUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{
 		Bytes: id,
 		Valid: true,
 	}
 }
 
-func toUUIDFromPgUUID(id pgtype.UUID) uuid.UUID {
+func ToUUIDFromPgUUID(id pgtype.UUID) uuid.UUID {
 	if !id.Valid {
 		return uuid.Nil
 	}

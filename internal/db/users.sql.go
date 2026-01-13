@@ -11,8 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const CreateUser = `-- name: CreateUser :one
+const createUser = `-- name: CreateUser :one
 INSERT INTO users (
+    user_id,
     first_name,
     last_name,
     email,
@@ -20,11 +21,12 @@ INSERT INTO users (
     age,
     status
 )
-VALUES ( $1, $2, $3, $4, $5, $6)
+VALUES ( $1, $2, $3, $4, $5, $6, $7)
     RETURNING user_id, email, status
 `
 
 type CreateUserParams struct {
+	UserID    pgtype.UUID
 	FirstName string
 	LastName  string
 	Email     string
@@ -40,7 +42,8 @@ type CreateUserRow struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.db.QueryRow(ctx, CreateUser,
+	row := q.db.QueryRow(ctx, createUser,
+		arg.UserID,
 		arg.FirstName,
 		arg.LastName,
 		arg.Email,
@@ -53,25 +56,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const DeleteUser = `-- name: DeleteUser :one
+const deleteUser = `-- name: DeleteUser :one
 DELETE FROM users
 WHERE user_id = $1
     RETURNING user_id
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, userID pgtype.UUID) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, DeleteUser, userID)
+	row := q.db.QueryRow(ctx, deleteUser, userID)
 	var user_id pgtype.UUID
 	err := row.Scan(&user_id)
 	return user_id, err
 }
 
-const GetAllUsers = `-- name: GetAllUsers :many
+const getAllUsers = `-- name: GetAllUsers :many
 SELECT user_id, first_name, last_name, email, phone, age, status FROM users ORDER BY first_name
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.Query(ctx, GetAllUsers)
+	rows, err := q.db.Query(ctx, getAllUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +101,12 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const GetUser = `-- name: GetUser :one
+const getUser = `-- name: GetUser :one
 SELECT user_id, first_name, last_name, email, phone, age, status FROM users WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, userID pgtype.UUID) (User, error) {
-	row := q.db.QueryRow(ctx, GetUser, userID)
+	row := q.db.QueryRow(ctx, getUser, userID)
 	var i User
 	err := row.Scan(
 		&i.UserID,
