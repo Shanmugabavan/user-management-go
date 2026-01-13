@@ -46,7 +46,7 @@ func (m *mockRepo) GetById(c context.Context, id uuid.UUID) (domain.User, error)
 }
 
 func (m *mockRepo) Update(c context.Context, id uuid.UUID, user *domain.User) (db.UpdateUserRow, error) {
-	return db.UpdateUserRow{}, nil
+	return db.UpdateUserRow{UserID: repository.ToPgUUID(id)}, nil
 }
 
 func (m *mockRepo) Delete(c context.Context, id uuid.UUID) (uuid.UUID, error) {

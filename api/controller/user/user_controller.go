@@ -109,12 +109,14 @@ func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	if err2 != nil {
 		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, err2.Error(), http.StatusInternalServerError)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(responses.Response{
+		err := json.NewEncoder(w).Encode(responses.Response{
 			Message: "Internal Server Error",
 			Errors:  err2.Error(),
 		})
+		if err != nil {
+			return
+		}
 		return
 	}
 

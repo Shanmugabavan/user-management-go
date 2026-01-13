@@ -61,4 +61,22 @@ func TestUserRespository(t *testing.T) {
 		assert.Error(t, err)
 		assert.Empty(t, user)
 	})
+
+	t.Run("UpdateUser", func(t *testing.T) {
+		userRepository.Create(context.Background(), &newUser)
+
+		updatedUserRequest := domain.User{
+			FirstName: "UpdatedFirstName",
+			LastName:  "UpdatedLastName",
+			Email:     "updatedEmail@email.com",
+			Phone:     "updatedPhone",
+			Age:       26,
+			Status:    domain.UserStatusInactive,
+			UserId:    newUser.UserId,
+		}
+		updatedUserRow, _ := userRepository.Update(context.Background(), newUser.UserId, &updatedUserRequest)
+		assert.NotEmpty(t, updatedUserRow)
+		assert.Equal(t, updatedUserRequest.Email, updatedUserRow.Email)
+		assert.Equal(t, updatedUserRequest.UserId, repository.ToUUIDFromPgUUID(updatedUserRow.UserID))
+	})
 }

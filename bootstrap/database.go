@@ -6,6 +6,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	pool "github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,10 +38,26 @@ func GetConnectionPool(env *Env) *pool.Pool {
 	}
 
 	fmt.Println("Successfully connected to database")
+	migrateData(connectionString)
+	fmt.Println("Successfully migration process done")
 
 	return db
 }
 
 func CloseConnectionPool(db *pool.Pool) {
+	db.Close()
+}
+
+func migrateData(connectionString string) {
+	db, err := migrate.New("file://./migrations", connectionString)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.Up()
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	db.Close()
 }
