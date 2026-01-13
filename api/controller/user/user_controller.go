@@ -34,15 +34,7 @@ type UserController struct {
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var createUserRequest create.UserRequest
 
-	err := json.NewDecoder(r.Body).Decode(&createUserRequest)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(responses.Response{
-			Message: "Json conversion error",
-			Errors:  err.Error(),
-		})
-		return
-	}
+	_ = json.NewDecoder(r.Body).Decode(&createUserRequest)
 
 	valError := validator.Validate.Struct(createUserRequest)
 	if valError != nil {
@@ -197,7 +189,7 @@ func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 // @Param user body update.UserRequest true "Update user payload"
 // @Success 200 {object} create.UserResponse "User updated successfully"
 // @Failure 400 {object} responses.Response "Invalid request / Validation failed"
-// @Failure 404 {object} responses.Response "User not found"
+// @Failure 404 {object} responses.Response
 // @Failure 500 {object} responses.Response "Internal server error"
 // @Router /users/{id} [put]
 func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
